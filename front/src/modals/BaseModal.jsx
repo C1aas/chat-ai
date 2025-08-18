@@ -58,8 +58,8 @@ export default function BaseModal({
               >
                 
                 {/* Header */}
-                <div className="flex justify-between items-center px-4 pt-4">
-                  <Dialog.Title className="text-sm text-tertiary">
+                <div className="flex justify-between items-center p-5 pb-3">
+                  <Dialog.Title className="font-semibold text-tertiary">
                     <Trans i18nKey={titleKey} />
                   </Dialog.Title>
 
@@ -78,7 +78,7 @@ export default function BaseModal({
                 </div>
 
                 {/* Content */}
-                <div className="p-4 pt-0 flex flex-col gap-0">
+                <div className="p-5 pt-0 flex flex-col gap-0">
                   {children}
                 </div>
 
