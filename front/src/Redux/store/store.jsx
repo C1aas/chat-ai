@@ -9,6 +9,8 @@ import {
 } from "redux-state-sync";
 import { applyMigrations } from "./migrations";
 
+import {appApi } from "../reducers/appApi"
+
 const persistConfig = {
   key: "root",
   storage,
@@ -18,6 +20,7 @@ const persistConfig = {
     "current_conversation",
     "user_settings",
     "version",
+    "appApi"
   ],
 };
 
@@ -122,6 +125,7 @@ export const store = configureStore({
     getDefaultMiddleware({
       serializableCheck: false, // Ignore checking non-serializable values
     })
+      .concat(appApi.middleware) // NEW: RTK Query middleware
       .concat(preventSyncMiddleware)
       .concat(createStateSyncMiddleware(stateSyncConfig)),
 });
