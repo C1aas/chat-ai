@@ -1,3 +1,5 @@
+import type { User } from "../types/user"
+
 // Fetches authenticated user's profile data from the server
 export const getUserData = async () => {
   try {
@@ -6,7 +8,7 @@ export const getUserData = async () => {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
     const userData = await response.json();
-    return userData;
+    return userData as User;
   } catch (error) {
     throw new Error(`Failed to fetch user data: ${error.message}`);
   }

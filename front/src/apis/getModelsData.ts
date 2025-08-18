@@ -1,3 +1,5 @@
+import type { ModelInfo } from "../types/models"
+
 // Gets available models data from the server
 export async function getModelsData() {
   try {
@@ -12,8 +14,9 @@ export async function getModelsData() {
     const enrichedModelsData = modelsData.map((model) => ({
       ...model,
       name: model.name || model.id,
+      extended: model.description ? true : false, // set extended based on if description is present
     }));
-    return enrichedModelsData;
+    return enrichedModelsData as ModelInfo[];
   } catch (error) {
     console.error("Failed to load models data", error);
     return []
