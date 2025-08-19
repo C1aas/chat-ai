@@ -1,4 +1,4 @@
-interface BaseModelInfo {
+export interface BaseModelInfo {
   id: string;
   object: "model";
   input: string[];
@@ -11,13 +11,13 @@ interface BaseModelInfo {
   extended: false;
 };
 
-interface ExtendedModelInfo extends Omit<BaseModelInfo, 'extended'> {
+export interface ExtendedModelInfo extends Omit<BaseModelInfo, 'extended'> {
   extended: true;
-  release_date: string;
+  releaseDate: string;
   company: string;
-  model_family: string;
-  context_length: string;
-  num_parameters: string;
+  modelFamily: string;
+  contextLength: string;
+  numParameters: string;
   description: string;
 };
 
