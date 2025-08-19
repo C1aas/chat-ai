@@ -8,20 +8,10 @@ import {
 } from '@fortawesome/free-solid-svg-icons'
 
 import DemandIndicator from "./DemandIndicator";
+import type { BaseModelInfo } from "../../types/models";
 
-import { useModelsList } from "../../hooks/useModelsList";
-
-export default function ModelSelector({}) {
-  const {
-    data: modelsList,
-    isLoading,
-    isFetching,
-    isError,
-    error,
-    refetch,
-  } = useModelsList();
-  
-  const [selectedModel, setSelectedModel] = useState(null);
+export default function ModelSelectorSimple({modelsList}: {modelsList: BaseModelInfo[]}) {
+  const [selectedModel, setSelectedModel] = useState<BaseModelInfo | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -45,7 +35,6 @@ export default function ModelSelector({}) {
 
   // setSelectedModel to the first element of the modelList if its loaded
   useEffect(() => {
-    console.log("ModelSelector: modelsList updated", modelsList);
     if (modelsList !== undefined && modelsList.length > 0) {
       const foundModel = modelsList.find((model) => model.id === "meta-llama-3.1-8b-instruct");
       setSelectedModel(foundModel || modelsList[0]);
@@ -58,7 +47,6 @@ export default function ModelSelector({}) {
     if (modelsList === undefined || modelsList.length === 0) {
       return [];
     }
-    console.log("ModelSelector: modelsList updated", modelsList);
     let result = modelsList.slice(); // copy list
     if (q && q !== ""){
       result = modelsList.filter((m) =>
@@ -78,9 +66,11 @@ export default function ModelSelector({}) {
   }, [searchQuery, modelsList, sortBy]);
 
   // use memo to not rerender on search input
-  const ListElement = memo(function buildElement({idx, model}) {
+  const ListElement = memo(({idx, model, onClick}: {idx: number, model: BaseModelInfo, onClick: () => void}) => {
     return (
-      <div role="option" aria-selected="false" data-index={idx} data-id={model.id} tabIndex={idx}
+      <div 
+        onClick={onClick}
+        data-index={idx} data-id={model.id} tabIndex={idx}
         className="item cursor-pointer my-1 px-2 py-1 hover:bg-slate-100 rounded-2xl border border-slate-200 bg-white"
       >
         <div className="flex items-center justify-between">
@@ -103,7 +93,6 @@ export default function ModelSelector({}) {
   return (
 
     <div ref={dropdownRef} className="w-full">
-
       {/** Trigger/Input **/}
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -159,12 +148,10 @@ export default function ModelSelector({}) {
         <div id="model-listbox" role="listbox" aria-label="Models" tabIndex={-1} className="max-h-96 overflow-auto px-2">
           <div className="rounded-xl overflow-hidden">
             {filteredModelsList.map((m, idx) => (
-              <span
-                onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}
-              >
-                <ListElement idx={idx} model={m} />
-              </span>
-
+              <ListElement
+              key={m.id}
+              onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}
+              idx={idx} model={m} />
             ))}
           </div>
         </div>

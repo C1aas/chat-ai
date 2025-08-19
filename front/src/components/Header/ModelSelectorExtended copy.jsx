@@ -7,8 +7,6 @@ import Tooltip from "../Others/Tooltip";
 
 import { useUpdateModelsData } from "../../hooks/useUpdateModelsData";
 
-import { updateConversation, selectCurrentConversation, selectCurrentConversationId } from "../../Redux/reducers/conversationsSlice";
-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import {
   faChevronDown, faList, faTableCells, faMagnifyingGlass, faLayerGroup, faFilter, faBrain, faImage, faVideo
@@ -18,7 +16,7 @@ import { faCalendar, faRectangleList } from '@fortawesome/free-regular-svg-icons
 
 import DemandIndicator from "./DemandIndicator";
 
-export default function ModelSelector({}) {
+export default function ModelSelectorExtended({}) {
 
   const modelsList = useUpdateModelsData();
   const [selectedModel, setSelectedModel] = useState(null);
@@ -209,12 +207,11 @@ export default function ModelSelector({}) {
               data-view="simple" class="view-btn px-3 py-2 text-sm hover:bg-slate-50 aria-selected:bg-indigo-600 aria-selected:text-white" role="tab" aria-selected={resultViewMode === "list"} title="List">
               <FontAwesomeIcon icon={faList} />
             </button>
-            {extended && (
-              <button
-                onClick={() => setResultViewMode("extended")}
-                data-view="extended" class="view-btn px-3 py-2 text-sm hover:bg-slate-50 aria-selected:bg-indigo-600 aria-selected:text-white" role="tab" aria-selected={resultViewMode === "extended"} title="Extended">
-                <FontAwesomeIcon icon={faRectangleList} />
-              </button>)}
+            <button
+              onClick={() => setResultViewMode("extended")}
+              data-view="extended" class="view-btn px-3 py-2 text-sm hover:bg-slate-50 aria-selected:bg-indigo-600 aria-selected:text-white" role="tab" aria-selected={resultViewMode === "extended"} title="Extended">
+              <FontAwesomeIcon icon={faRectangleList} />
+            </button>
             <button
               onClick={() => setResultViewMode("grid")}
               data-view="grid" class="view-btn px-3 py-2 text-sm hover:bg-slate-50 aria-selected:bg-indigo-600 aria-selected:text-white" role="tab" aria-selected={resultViewMode === "grid"} title="Grid">
@@ -224,16 +221,16 @@ export default function ModelSelector({}) {
 
 
           {/** Grouping switch (default ON: by family) **/}
-          {extended && (
-            <div class="items-center gap-2 ml-1" title="Group by family">
-              <FontAwesomeIcon icon={faLayerGroup} className="text-slate-500" />
-              <label class="relative inline-flex items-center cursor-pointer select-none">
-                <input id="group-toggle" type="checkbox" class="sr-only peer" checked="" />
-                <div class="w-11 h-6 bg-slate-200 rounded-full transition-colors peer-checked:bg-indigo-500"></div>
-                <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
-              </label>
-            </div>
-          )}
+          
+          <div class="items-center gap-2 ml-1" title="Group by family">
+            <FontAwesomeIcon icon={faLayerGroup} className="text-slate-500" />
+            <label class="relative inline-flex items-center cursor-pointer select-none">
+              <input id="group-toggle" type="checkbox" class="sr-only peer" checked="" />
+              <div class="w-11 h-6 bg-slate-200 rounded-full transition-colors peer-checked:bg-indigo-500"></div>
+              <div class="absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow peer-checked:translate-x-5 transition-transform"></div>
+            </label>
+          </div>
+          
 
 
           {/** Sort **/}
@@ -245,33 +242,33 @@ export default function ModelSelector({}) {
               <option value="name-asc">Name (A→Z)</option>
               <option value="name-desc">Name (Z→A)</option>
               
-              {extended && (<option value="date-desc">Release (new→old)</option>)}
-              {extended && (<option value="date-asc">Release (old→new)</option>)}
-              {extended && (<option value="params-desc">Params (high→low)</option>)}
-              {extended && (<option value="params-asc">Params (low→high)</option>)}
+              <option value="date-desc">Release (new→old)</option>
+              <option value="date-asc">Release (old→new)</option>
+              <option value="params-desc">Params (high→low)</option>
+              <option value="params-asc">Params (low→high)</option>
             </select>
           </label>
 
           {/** FILTER ICON with popover **/}
-          {extended && (
-            <div class="relative">
-              <button id="filter-btn" class="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 hover:bg-slate-50" title="Filters">
-                <FontAwesomeIcon icon={faFilter} className="text-slate-500" />
-              </button>
-              <div id="filter-pop" class="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-xl p-2 text-sm hidden">
-                <div class="px-2 py-1.5 text-xs font-semibold text-slate-500">Capabilities</div>
-                <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-                  <input type="checkbox" class="filter-out" data-out="thought" /> <i class="fa-solid fa-brain text-purple-600"></i> Reasoning / Thinking
-                </label>
-                <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-                  <input type="checkbox" class="filter-cap" data-cap="image" /> <i class="fa-regular fa-image text-indigo-600"></i> Image
-                </label>
-                <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
-                  <input type="checkbox" class="filter-cap" data-cap="video" /> <i class="fa-solid fa-video text-indigo-600"></i> Video
-                </label>
-              </div>
+          
+          <div class="relative">
+            <button id="filter-btn" class="inline-flex items-center justify-center w-9 h-9 rounded-xl border border-slate-200 hover:bg-slate-50" title="Filters">
+              <FontAwesomeIcon icon={faFilter} className="text-slate-500" />
+            </button>
+            <div id="filter-pop" class="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 bg-white shadow-xl p-2 text-sm hidden">
+              <div class="px-2 py-1.5 text-xs font-semibold text-slate-500">Capabilities</div>
+              <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input type="checkbox" class="filter-out" data-out="thought" /> <i class="fa-solid fa-brain text-purple-600"></i> Reasoning / Thinking
+              </label>
+              <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input type="checkbox" class="filter-cap" data-cap="image" /> <i class="fa-regular fa-image text-indigo-600"></i> Image
+              </label>
+              <label class="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer">
+                <input type="checkbox" class="filter-cap" data-cap="video" /> <i class="fa-solid fa-video text-indigo-600"></i> Video
+              </label>
             </div>
-          )}
+          </div>
+          
         </div>
 
         {/** Results List **/}
