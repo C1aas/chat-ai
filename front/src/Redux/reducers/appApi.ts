@@ -1,55 +1,47 @@
 // src/store/services/appApi.ts
-import { createApi, fakeBaseQuery } from "@reduxjs/toolkit/query/react";
-import { getModelsData } from "../../apis/getModelsData";
-import { getUserData } from "../../apis/getUserData";
-
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import type { ModelInfo } from "../../types/models";
 import type { User } from "../../types/user";
 
 export const appApi = createApi({
   reducerPath: "appApi",
-  baseQuery: fakeBaseQuery(),
+  baseQuery: fetchBaseQuery({}), // absolute URLs work fine here
   tagTypes: ["ModelList", "User"],
   endpoints: (builder) => ({
+    // --- USER ---------------------------------------------------------------
+    getUser: builder.query<User, void>({
+      query: () => ({
+        url: import.meta.env.VITE_USERDATA_ENDPOINT,
+        method: "GET",
+      }),
+      providesTags: ["User"],
+    }),
+
+    // --- MODELS -------------------------------------------------------------
     getModels: builder.query<ModelInfo[], void>({
-      queryFn: async () => {
-        try {
-          const data = (await getModelsData()) as ModelInfo[];
-          return { data };
-        } catch (err: any) {
-          return {
-            error: {
-              status: "CUSTOM_ERROR",
-              message: String(err?.message ?? err),
-            },
-          };
-        }
+      query: () => ({
+        url: import.meta.env.VITE_MODELS_ENDPOINT,
+        method: "GET",
+      }),
+      // Accepts either { data: ModelInfo[] } or a bare ModelInfo[]
+      transformResponse: (response: unknown): ModelInfo[] => {
+        console.log("RTK QUERY ModelSelector: modelsList updated", response);
+        const raw =(response as any)?.data ?? []
+
+        return (raw as ModelInfo[]).map((model) => ({
+          ...model,
+          name: model.name ?? model.id,
+          extended: Boolean((model as any)?.description),
+        }));
       },
       providesTags: ["ModelList"],
-    }),
-    getUser: builder.query<User, void>({
-      queryFn: async () => {
-        console.log("Fetching user data");
-        try {
-          const data = (await getUserData()) as User;
-          return { data };
-        } catch (err: any) {
-          return {
-            error: {
-              status: "CUSTOM_ERROR",
-              message: String(err?.message ?? err),
-            },
-          };
-        }
-      },
-      providesTags: ["User"],
     }),
   }),
 });
 
 export const { useGetModelsQuery, useGetUserQuery } = appApi;
 
-// global invalidation helpers
+// --- Global invalidation helpers (unchanged) --------------------------------
 export const forceRefetchModelList =
   () => (dispatch: any) => dispatch(appApi.util.invalidateTags(["ModelList"]));
 
