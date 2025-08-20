@@ -28,7 +28,7 @@ function Tooltip({ text, children }) {
     <>
       <span
         ref={ref}
-        className="inline-flex relative cursor-pointer h-fit items-center justify-center"
+        className="cursor-pointer"
         onMouseEnter={() => setOpen(true)}
         onMouseLeave={() => setOpen(false)}
       >
