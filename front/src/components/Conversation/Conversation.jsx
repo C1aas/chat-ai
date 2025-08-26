@@ -11,7 +11,6 @@ import MessageAssistant from "./MessageAssistant/MessageAssistant";
 export default function Conversation({
   localState,
   setLocalState,
-  modelsData,
 }) {
   // Hooks
 
