@@ -14,10 +14,10 @@ import { getDefaultConversation } from "../../utils/conversationUtils";
 export default function DeleteConversationModal({
   id,
   conversations,
+  currentConversationId,
   isOpen,
   onClose,
 }) {
-  const currentConversationId = useSelector(selectCurrentConversationId);
   const navigate = useNavigate();
   const dispatch = useDispatch();
 
@@ -26,18 +26,21 @@ export default function DeleteConversationModal({
     // If conversation not found, do nothing
     if (currentIndex === -1) return;
 
+    // If this is the only conversation, create a new one
+    if (conversations.length === 1) {
+      console.log("Only one conversation, creating a new one.");
+      
+      const newConversationId = await createConversation(getDefaultConversation());
+      console.log("Created new conversation with id:", newConversationId);
+      navigate(`/chat/${newConversationId}`);
+      // const action = dispatch(addConversation());
+      // nextConversationId = action.payload.id;
+    }
+
     // If deleting current conversation
     if (id === currentConversationId) {
-
-      if (conversations.length === 1) {
-        console.log("Only one conversation, creating a new one.");
-        // If this is the only conversation, create a new one
-        const newConversationId = await createConversation(getDefaultConversation());
-        console.log("Created new conversation with id:", newConversationId);
-        navigate(`/chat/${newConversationId}`);
-        // const action = dispatch(addConversation());
-        // nextConversationId = action.payload.id;
-      }
+      //navigate to base page and logic there decide which page to show
+      navigate(`/chat/`);
     }
     deleteConversation(id);
     onClose();

@@ -432,7 +432,7 @@ const SettingsPanel = ({
                 <button
                   onClick={() => dispatch(toggleSettings())}
                   className="cursor-pointer p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                  title="Close sidebar"
+                  title="Close Settings"
                 >
                   <ChevronRight className="w-7 h-7 text-tertiary" />
                 </button>

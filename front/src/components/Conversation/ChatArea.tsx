@@ -2,7 +2,6 @@ import { useSelector } from "react-redux";
 import ModelSelectorWrapper from "../Header/ModelSelectorWrapper";
 import { selectShowSettings } from "../../Redux/reducers/interfaceSettingsSlice";
 import WarningExternalModel from "../Others/WarningExternalModel";
-import HallucinationWarning from "../Others/HallucinationWarning";
 import Conversation from "./Conversation";
 import Prompt from "../Prompt/Prompt";
 
@@ -25,13 +24,12 @@ export default function ChatArea({localState, setLocalState, userData, modelsDat
           />
 
           {/* Conversation Area */}
-          <div className="h-full flex flex-col relative rounded-xl bg-white dark:bg-bg_secondary_dark p-4 shadow-md">
+          <div className="h-full flex flex-col relative rounded-xl bg-white dark:bg-bg_secondary_dark shadow-md dark:shadow-dark">
             {/* External model warning aligned top right in the Chat Area */}
             {!showSettings && (
               <WarningExternalModel localState={localState} userData={userData} />
             )}
             <div className="flex-1 min-h-0 overflow-y-auto flex flex-col relative w-full">
-              <HallucinationWarning />
               <Conversation
                 localState={localState}
                 setLocalState={setLocalState}

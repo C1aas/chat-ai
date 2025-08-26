@@ -39,14 +39,8 @@ export default function ChatPage() {
   if(conversationId !== undefined && !validateConversationId(conversationId)) {
     console.error("Invalid conversationId:", conversationId);
     navigate("/notfound");
-    return <div>Invalid conversation ID. Redirecting...</div>;
+    return <div>Invalid conversation ID. Redirecting...</div>; // as a Fallback: this will actually not render due to the navigate
   }
-
-  useEffect(()=>{
-    console.log("ChatPage rendered with conversationId:", conversationId);
-  },[conversationId]);
-  
-
 
   const [localState, setLocalState] = useState(() => getDefaultConversation());
 
@@ -72,7 +66,7 @@ export default function ChatPage() {
                   grid 
                   grid-cols-1 grid-rows-[auto_1fr_auto]
                   md:grid-cols-[auto_1fr_auto] md:grid-rows-[1fr_auto]
-                  md:gap-x-6 gap-y-1 md:p-1
+                  md:gap-x-6 gap-y-1 md:pt-1
                   bg-gray-100 dark:bg-bg_dark`}
     >
       <Header

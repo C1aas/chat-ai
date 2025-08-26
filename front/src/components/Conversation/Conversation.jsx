@@ -253,7 +253,7 @@ export default function Conversation({
   // if (localState.messages?.length <= 2) return null;
 
   return (
-    <div className={`flex-1 min-h-0 h-full overflow-y-auto flex flex-col relative w-full border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md dark:shadow-dark bg-white dark:bg-bg_secondary_dark
+    <div className={`flex-1 min-h-0 h-full overflow-y-auto flex flex-col relative w-full rounded-2xl
     transition-opacity duration-500 ease-in-out w-full
     ${localState.messages.length <= 2 ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden" : "scale-100 opacity-100"}`}>
       <HallucinationWarning />

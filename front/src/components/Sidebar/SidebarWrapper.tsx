@@ -24,7 +24,7 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
     }
   }, [isDesktop, dispatch]);
 
-  async function handleNewChat() {
+  async function handleNewConversation() {
     dispatch({ type: "conversations/setLockConversation", payload: true });
     const newId = await createConversation(getDefaultConversation());
     navigate(`/chat/${newId}`);
@@ -32,26 +32,27 @@ export default function SidebarWrapper({ localState, setLocalState, userData, mo
 
   return (
     <>
-      <div className="flex relative min-w-[4rem]">
+      <div className="hidden md:flex relative min-w-[4rem]">
         {/**<div className={`hidden h-full md:flex ${showSidebar && isDesktop && "md:hidden"}`}> */}
         <div className={`h-full absolute
-                      transition-all duration-200 ease-in
-                      ${showSidebar ? "-translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100"}
+                      transition-all duration-300 ease-in-out
+                      ${showSidebar ? "w-[13vw] opacity-0 pointer-events-none" : "w-[4rem] opacity-100"}
         `}>
-          <SidebarRail onOpen={() => { dispatch(toggleSidebar()) }} handleNewChat={handleNewChat} />
+          <SidebarRail localState={localState} onOpen={() => { dispatch(toggleSidebar()) }} handleNewConversation={handleNewConversation} />
         </div>
 
         {(isDesktop) && (
+
           <div className={`h-full
                         transition-all duration-300 ease-in-out overflow-hidden
-          ${showSidebar ? "opacity-100 w-[13vw]" : "w-0 opacity-0 pointer-events-none"}`}>
-            <SidebarPanel localState={localState} handleNewChat={handleNewChat} />
+          ${showSidebar ? "opacity-100 w-[15rem]" : "w-[4rem] opacity-0 pointer-events-none"}`}>
+            <SidebarPanel localState={localState} setLocalState={setLocalState} handleNewConversation={handleNewConversation} />
           </div>
         )}
-        {(!isDesktop) && (
-          <SidebarDrawer localState={localState} handleNewChat={handleNewChat} />
-        )}
       </div>
+      {(!isDesktop) && (
+          <SidebarDrawer localState={localState} setLocalState={setLocalState} handleNewConversation={handleNewConversation} />
+        )}
     </>
   );
 }

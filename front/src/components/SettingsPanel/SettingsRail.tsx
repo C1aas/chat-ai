@@ -47,12 +47,12 @@ export default function SidebarRail({localState, setLocalState, userData, models
       className="bg-white dark:bg-bg_secondary_dark
               rounded-xl shadow-md
               overflow-hidden
-              w-[4rem] h-full"
+              h-full"
     >
       <div className="h-full flex flex-col items-center gap-2">
           
 
-          <div className="mt-4 flex flex-col gap-3 items-center">
+          <div className="mt-2 flex flex-col gap-3 items-center">
             {/* User profile */}
             <UserContainer
               localState={localState}
@@ -60,11 +60,11 @@ export default function SidebarRail({localState, setLocalState, userData, models
               userData={userData}
               modelsData={modelsData}
             />
-            {/* Chevron Button */}
+            
             <ThemeToggle />
             <button
               onClick={() => onOpen?.()}
-              className="h-10 w-10 rounded-xl hover:bg-gray-100 cursor-pointer"
+              className="h-10 w-10 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 cursor-pointer"
               title="Expand"
             >
               <FontAwesomeIcon size="xl" className="text-tertiary" icon={faGear} />

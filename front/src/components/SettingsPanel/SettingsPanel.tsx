@@ -13,7 +13,7 @@ export default function SettingsPanel({ localState, setLocalState, userData, mod
       className="h-full bg-white dark:bg-bg_secondary_dark
               rounded-xl shadow-md dark:shadow-dark
               overflow-hidden
-              w-[25vw] min-w-[15rem]"
+              w-[30rem] min-w-[15rem]"
     >
       <SettingsContent localState={localState} setLocalState={setLocalState} userData={userData} modelsData={modelsData} />
     </div>

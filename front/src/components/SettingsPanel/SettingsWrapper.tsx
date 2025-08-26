@@ -7,12 +7,11 @@ import SettingsDrawer from "./SettingsDrawer";
 import SettingsPanel from "./SettingsPanel";
 
 export default function SettingsWrapper({ localState, setLocalState, userData, modelsData }) {
+  /** This Component decides which sidebar */
   const dispatch = useDispatch();
 
   const showSettings = useSelector(selectShowSettings);
   const { isMobile, isTablet, isDesktop } = useWindowSize();
-
-  console.log("Rendering SettingsWrapper showSettings", showSettings);
 
   useEffect(() => {
     if (!isDesktop) {
@@ -24,9 +23,9 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
   return (
     <>
       <div className="flex relative min-w-[4rem]">
-        <div className={`h-full absolute right-0
-                      transition-all duration-200 ease-in-out
-                      ${showSettings ? "translate-x-full opacity-0 pointer-events-none" : "translate-x-0 opacity-100"}
+        <div className={`h-full absolute  right-0
+                      transition-all duration-300 ease-in-out
+                      ${showSettings ? "w-[30rem] opacity-0 pointer-events-none" : "w-[4rem] opacity-100"}
         `}>
           <SettingsRail
             onOpen={() => dispatch(toggleSettings())}
@@ -39,7 +38,7 @@ export default function SettingsWrapper({ localState, setLocalState, userData, m
         {(isDesktop) && (
           <div className={`h-full 
                         transition-all duration-300 ease-in-out overflow-hidden
-          ${showSettings ? "opacity-100 w-[25vw]" : "w-0 opacity-0 pointer-events-none"}`}>
+          ${showSettings ? "opacity-100 w-[30rem]" : "w-[4rem] opacity-0 pointer-events-none"}`}>
             <SettingsPanel localState={localState} setLocalState={setLocalState} userData={userData} modelsData={modelsData} />
           </div>
         )}
