@@ -5,16 +5,21 @@ import { editMemory, addMemory, selectAllMemories } from "../Redux/reducers/user
 import { chatCompletions } from "../apis/chatCompletions";
 import generateMemory from "../apis/generateMemory";
 import generateTitle from "../apis/generateTitle";
-import { loadFile, loadFileMeta } from "../db";
-import { readFileAsBase64 } from "./attachments";
+import { loadFile, loadFileMeta, updateConversation } from "../db";
+import { getFileType, readFileAsBase64, readFileAsText } from "./attachments";
 
 // Convert content items to standard OpenAI API
-export async function processContentItems(items, ignoreImages = false, ignoreAudio = false, ignoreFiles = false) {
+export async function processContentItems({
+  items,
+  ignoreImages = false, 
+  ignoreAudio = false, 
+  ignoreVideo = false, 
+  ignoreFiles = false,
+}) {
   const output = [];
   for (const item of items) {
     if (item.type === 'text') {
       if (item.text && items.length === 1) {
-        //output.push(item.text); // Just the text itself
         return item.text
       }
       output.push(item)
@@ -27,37 +32,45 @@ export async function processContentItems(items, ignoreImages = false, ignoreAud
         console.warn(`File meta not found for fileId=${item.fileId}`);
         continue;
       }
-
-      // Ignore unsupported files
-      if (ignoreImages && file.type.startsWith("image/")) continue;
-      else if (ignoreAudio && file.type.startsWith("audio/")) continue;
+      const mimeType = meta.type.toLowerCase();
+      const fileType = getFileType(meta);
+      // Skip unsupported files
+      if (ignoreImages && fileType === "image") continue;
+      else if (ignoreAudio && fileType === "audio") continue;
+      else if (ignoreVideo && fileType === "video") continue;
       else if (ignoreFiles
-        && !file.type.startsWith("image/")
-        && !file.type.startsWith("audio/"))
+        && fileType !== "image"
+        && fileType !== "audio"
+        && fileType !== "video")
         continue;
-
       // Load supported files
       const file = await loadFile(item.fileId);
       if (!file) {
         console.warn(`File data not found for fileId=${item.fileId}`);
         continue;
       }
-
-      const mimeType = meta.type.toLowerCase();
-
-      if (mimeType.startsWith('image')) {
-        // Get base64 data URL for image
+      
+      // Handle based on generic file type
+      if (fileType === "image") {
+        // Send as Base64 data URL for image
         const dataUrl = await readFileAsBase64(file);
         output.push({
           type: "image_url",
           image_url: { url: dataUrl }
         });
       }
-
-      else if (mimeType.startsWith('audio')) {
-        // Base64 encode without the data prefix
+      else if (fileType === "video") {
+        // Send as Base64 data URL for video
+        const dataUrl = await readFileAsBase64(file);
+        output.push({
+          type: "video_url",
+          video_url: { url: dataURL }
+        });
+      }
+      else if (fileType === "audio") {
+        // Base64 encoding without data prefix for audio
         const base64Data = await readFileAsBase64(file);
-        // Determine audio format from the MIME type
+        // Determine audio format from MIME type
         let format = 'mp3';
         if (mimeType.includes('wav')) {
           format = 'wav';
@@ -65,16 +78,27 @@ export async function processContentItems(items, ignoreImages = false, ignoreAud
         output.push({
           type: "input_audio",
           input_audio: {
-            data: base64Data,
+            data: base64Data.split(",")[1], // Remove prefix
             format
           }
         });
       }
-
-      // TODO handle generic files
-
+      else if (fileType === "pdf") {
+        // Shouldn't send unprocessed PDF file
+        continue;
+      }
       else {
-        console.warn(`Unsupported file type: ${mimeType}`);
+        try {
+          console.log("Rendering fileType ", fileType, " stored as text")
+          // Send file as text
+          const textContent = await readFileAsText(file);
+          output.push({
+            type: "text",
+            text: textContent
+          });
+        } catch (error) {
+          console.warn(`Unsupported file type: ${mimeType}, ${error}`);
+        }
       }
     }
   }
@@ -84,18 +108,29 @@ export async function processContentItems(items, ignoreImages = false, ignoreAud
 
 // Build OpenAI standard conversation from localState
 async function buildConversationForAPI(localState) {
+  // Determine supported file types from model
+  const model = localState.settings.model;
+  const ignoreAudio = !(model?.input?.includes("audio") || false)
+  const ignoreVideo = !(model?.input?.includes("video") || false)
+  const ignoreImages = !(model?.input?.includes("image") || false)
+  // Convert to API standard, ignore unsupported files
   const processedMessages = await Promise.all(
     localState.messages.map(async (message) => {
       if (Array.isArray(message.content)) {
         return {
           role: message.role,
-          content: await processContentItems(message.content)
+          content: await processContentItems({
+            items: message.content,
+            ignoreImages,
+            ignoreAudio,
+            ignoreVideo,
+        })
         };
       }
       return message;
     })
   );
-
+  // Return full standard conversation
   return {
     ...localState,
     messages: processedMessages
@@ -106,402 +141,17 @@ const sendMessage = async ({
   localState,
   setLocalState,
   openModal,
-  // === OPERATION CONFIG ===
   notifyError,
   notifySuccess,
-
-  // === REACT STATE & DISPATCHERS ===
   dispatch,
-
-  // === EXTERNAL FUNCTIONS ===
   timeout,
 }) => {
-  const memories = []// useSelector(selectAllMemories);
-  // Set loading state
-  dispatch(setLockConversation(true));
-  // if (operationType === "new") {
-  //   setLoading(true);
-  // } else {
-  //   setLoadingResend(true);
-  // }
+  const memories = []// TODO get memories useSelector(selectAllMemories);
+  const conversationId = `${localState.id}`
 
   try {
     const isArcanaSupported = (localState.settings.model?.input?.includes("arcana") || false)    
     let finalConversationForState; // For local state updates
-    // Deepcopy of localState
-      // === NEW MESSAGE LOGIC (from getRes) ===
-
-      // Check model support first
-      // const imageSupport = modelsData.some(
-      //   (modelX) =>
-      //     modelX.name === localState.settings.model.name &&
-      //     modelX.input.includes("image")
-      // );
-      // const videoSupport = modelsData.some(
-      //   (modelX) =>
-      //     modelX.name === localState.setting.model.name &&
-      //     modelX.input.includes("video")
-      // );
-      // const audioSupport = modelsData.some(
-      //   (modelX) =>
-      //     modelX.name === localState.settings.model.name &&
-      //     modelX.input.includes("audio")
-      // );
-      // console.log(processedConversation);
-      // // Process conversation based on image/video/audio support
-      // if (!imageSupport && !videoSupport && !audioSupport) {
-      //   processedConversation = processedConversation.map((message) => {
-      //     if (message.role === "user" && Array.isArray(message.content)) {
-      //       return {
-      //         role: "user",
-      //         content: message.content
-      //           .filter((item) => item.type === "text")
-      //           .map((item) => item.text)
-      //           .join("\n"),
-      //       };
-      //     }
-      //     return message;
-      //   });
-      // }
-
-      // Process selected files
-      // if (selectedFiles.length > 0) {
-      //   const imageFiles = selectedFiles.filter(
-      //     (file) => file.type === "image"
-      //   );
-      //   const videoFiles = selectedFiles.filter(
-      //     (file) => file.type === "video"
-      //   );
-      //   const textFiles = selectedFiles.filter(
-      //     (file) =>
-      //       file.type !== "image" &&
-      //       file.type !== "video" &&
-      //       file.type !== "audio"
-      //   );
-      //   const audioFiles = selectedFiles.filter(
-      //     (file) => file.type === "audio"
-      //   );
-
-      //   // Create content arrays for response storage
-      //   const audioContent = audioFiles.map((audioFile) => ({
-      //     type: "input_audio",
-      //     input_audio: {
-      //       data: audioFile.text, // Raw base64
-      //       format: audioFile.format, // "wav" or "mp3"
-      //     },
-      //   }));
-
-      //   const imageContent = imageFiles.map((imageFile) => ({
-      //     type: "image_url",
-      //     image_url: {
-      //       url: imageFile.text,
-      //     },
-      //   }));
-
-      //   const videoContent = videoFiles.map(() => ({
-      //     type: "video_url",
-      //     video_url: {
-      //       url: "",
-      //     },
-      //   }));
-
-      //   const textContent = textFiles.map((file) => ({
-      //     name: file.name,
-      //     fileType: file.fileType || "text",
-      //     content:
-      //       file.fileType === "pdf" ||
-      //       file.fileType === "docx" ||
-      //       file.fileType === "excel"
-      //         ? `${file.name}: ${file.processedContent}`
-      //         : `${file.name}: ${file.content}`,
-      //     type: "text",
-      //     size: file.size,
-      //   }));
-
-      //   // FIXED: Store audio files properly for resend functionality
-      //   const audioFilesForStorage = audioFiles.map((audioFile) => ({
-      //     name: audioFile.name,
-      //     format: audioFile.format,
-      //     data: audioFile.text, // Raw base64
-      //     size: audioFile.size,
-      //     type: "audio",
-      //   }));
-
-      //   // Add response entry with files
-      //   setLocalState((prevState) => ({
-      //     ...prevState,
-      //     responses: [
-      //       ...prevState.responses,
-      //       {
-      //         prompt: prevState.prompt,
-      //         images: imageContent,
-      //         videos: videoContent,
-      //         textFiles: textContent,
-      //         audio: audioContent, // For API request format
-      //         audioFiles: audioFilesForStorage, // For resend functionality
-      //         response: "",
-      //       },
-      //     ],
-      //   }));
-      // } else {
-      //   // Add response entry without images
-      //   setLocalState((prevState) => ({
-      //     ...prevState,
-      //     responses: [
-      //       ...prevState.responses,
-      //       {
-      //         prompt: prevState.prompt,
-      //         response: "",
-      //       },
-      //     ],
-      //   }));
-      // }
-    // else {
-    //   // === RESEND/EDIT LOGIC ===
-
-    //   // Validate index
-    //   if (index < 0 || index >= localState.responses.length) {
-    //     notifyError("Something went wrong");
-    //     dispatch(setLockConversation(false));
-    //     setLoadingResend(false);
-    //     return;
-    //   }
-
-    //   // Get prompt based on operation
-    //   let currentPrompt;
-    //   if (operationType === "edit") {
-    //     if (!editedText || !editedText?.trim()) {
-    //       notifyError("Prompt cannot be empty!");
-    //       dispatch(setLockConversation(false));
-    //       setLoadingResend(false);
-    //       return;
-    //     }
-    //     currentPrompt = editedText;
-    //   } else {
-    //     // resend
-    //     currentPrompt = localState.responses[index]?.prompt;
-    //     // if (!currentPrompt || currentPrompt?.trim() === "") {
-    //     //   notifyError("Invalid or empty prompt at the specified index.");
-    //     //   dispatch(setIsResponding(false));
-    //     //   setLoadingResend(false);
-    //     //   return;
-    //     // }
-    //   }
-
-    //   // Get existing files from the response
-    //   let imageFiles = [];
-    //   let textFiles = [];
-    //   let audioFiles = [];
-    //   let audioFilesForStorage = [];
-
-    //   if (localState.responses[index]?.images?.length > 0) {
-    //     imageFiles = localState.responses[index]?.images;
-    //   }
-    //   if (localState.responses[index]?.textFiles?.length > 0) {
-    //     textFiles = localState.responses[index]?.textFiles;
-    //   }
-
-    //   // FIXED: Handle audio files properly for resend
-    //   if (localState.responses[index]?.audio?.length > 0) {
-    //     audioFiles = localState.responses[index]?.audio; // For API format
-    //   }
-    //   if (localState.responses[index]?.audioFiles?.length > 0) {
-    //     audioFilesForStorage = localState.responses[index]?.audioFiles; // For resend functionality
-    //   }
-
-    //   // Reconstruct conversation
-    //   const originalConversation = [...localState.messages];
-
-    //   // Count actual user-assistant pairs in responses (excluding info objects)
-    //   let actualPairIndex = 0;
-    //   for (let i = 0; i <= index; i++) {
-    //     if (!localState.responses[i]?.info) {
-    //       if (i === index) break;
-    //       actualPairIndex++;
-    //     }
-    //   }
-
-    //   // Filter out info messages to do proper slicing
-    //   const filteredConversation = localState.messages.filter(
-    //     (message) => message.role !== "info"
-    //   );
-
-    //   // Do the slice on filtered conversation using the actual pair index
-    //   const slicedFiltered = filteredConversation.slice(
-    //     0,
-    //     actualPairIndex * 2 + 1
-    //   );
-
-    //   // Now reconstruct conversation with info messages back in their original positions
-    //   let newConversation = [];
-    //   let filteredIndex = 0;
-
-    //   for (const originalMessage of originalConversation) {
-    //     if (originalMessage.role === "info") {
-    //       // Check if this info message should be included (appears before our cutoff)
-    //       const lastKeptMessage = slicedFiltered[slicedFiltered.length - 1];
-    //       const lastKeptOriginalIndex =
-    //         originalConversation.indexOf(lastKeptMessage);
-    //       const currentOriginalIndex =
-    //         originalConversation.indexOf(originalMessage);
-
-    //       if (currentOriginalIndex <= lastKeptOriginalIndex) {
-    //         newConversation.push(originalMessage);
-    //       }
-    //     } else {
-    //       // Non-info message - check if it's in our sliced array
-    //       if (
-    //         filteredIndex < slicedFiltered.length &&
-    //         originalMessage === slicedFiltered[filteredIndex]
-    //       ) {
-    //         newConversation.push(originalMessage);
-    //         filteredIndex++;
-    //       }
-    //     }
-    //   }
-
-    //   // Update responses
-    //   // let newResponses = [...localState.responses].slice(0, index);
-    //   // updateLocalState({ responses: newResponses });
-
-    //   // Add small delay to ensure state updates properly
-    //   await new Promise((resolve) => setTimeout(resolve, 0));
-
-    //   // Prepare new message content based on whether there are attachments
-    //   if (
-    //     imageFiles?.length > 0 ||
-    //     textFiles?.length > 0 ||
-    //     audioFiles?.length > 0
-    //   ) {
-    //     // Start with the prompt text
-    //     const newPromptContent = [
-    //       {
-    //         type: "text",
-    //         text: currentPrompt,
-    //       },
-    //     ];
-
-    //     // Add images if they exist
-    //     if (imageFiles?.length > 0) {
-    //       newPromptContent.push(...imageFiles);
-    //     }
-
-    //     // Add audio if it exists
-    //     if (audioFiles?.length > 0) {
-    //       newPromptContent.push(...audioFiles);
-    //     }
-
-    //     // Add text content if text files exist
-    //     if (textFiles?.length > 0) {
-    //       // Process all text files and append their content
-    //       const textContent = textFiles
-    //         .map((file) => file.content)
-    //         .join("\n\n");
-
-    //       // Only add if there's actually content
-    //       if (textContent.trim()) {
-    //         newPromptContent[0].text += `\n${textContent}`;
-    //       }
-    //     }
-
-    //     newConversation.push({ role: "user", content: newPromptContent });
-    //   } else {
-    //     // If no attachments, just use the text prompt
-    //     newConversation.push({ role: "user", content: currentPrompt });
-    //   }
-
-    //   // Update local state with new response entry
-    //   if (
-    //     imageFiles?.length > 0 ||
-    //     textFiles?.length > 0 ||
-    //     audioFiles?.length > 0
-    //   ) {
-    //     setLocalState((prevState) => ({
-    //       ...prevState,
-    //       responses: [
-    //         ...prevState.responses,
-    //         {
-    //           prompt: currentPrompt,
-    //           images: imageFiles,
-    //           textFiles: textFiles,
-    //           audio: audioFiles, // For API format
-    //           audioFiles: audioFilesForStorage, // For resend functionality
-    //           response: "",
-    //         },
-    //       ],
-    //     }));
-    //   } else {
-    //     setLocalState((prevState) => ({
-    //       ...prevState,
-    //       responses: [
-    //         ...prevState.responses,
-    //         {
-    //           prompt: currentPrompt,
-    //           response: "",
-    //         },
-    //       ],
-    //     }));
-    //   }
-
-    //   // Process conversation for model support
-    //   const imageSupport = modelsData.some(
-    //     (modelX) =>
-    //       modelX.name === localState.settings.model.name &&
-    //       modelX.input.includes("image")
-    //   );
-    //   const videoSupport = modelsData.some(
-    //     (modelX) =>
-    //       modelX.name === localState.settings.model.name &&
-    //       modelX.input.includes("video")
-    //   );
-    //   const audioSupport = modelsData.some(
-    //     (modelX) =>
-    //       modelX.name === localState.settings.model.name &&
-    //       modelX.input.includes("audio")
-    //   );
-
-    //   // Create updated conversation array for processing - REMOVE "info" role objects
-    //   let updatedConversation = [...newConversation].filter(
-    //     (message) => message.role !== "info"
-    //   );
-
-    //   // If model doesn't support images/videos/audio, remove multimedia content
-    //   if (!imageSupport && !videoSupport && !audioSupport) {
-    //     updatedConversation = updatedConversation.map((message) => {
-    //       if (message.role === "user" && Array.isArray(message.content)) {
-    //         return {
-    //           role: "user",
-    //           content: message.content
-    //             .filter((item) => item.type === "text")
-    //             .map((item) => item.text)
-    //             .join("\n"),
-    //         };
-    //       }
-    //       return message;
-    //     });
-    //   }
-
-    //   processedConversation = updatedConversation;
-    //   finalConversationForState = newConversation;
-    // }
-    // let conversationForAPI = {
-    //     ...localState,
-    //     messages: localState.messages.map((message) => {
-    //       // Handle simple text messages
-    //       if (Array.isArray(message.content)) {
-    //         return {
-    //           role: message.role,
-    //           content: await processContentItems(message.content)
-    //           // .filter((item) => item.type === "text")
-    //           // .map((item) => item.text)
-    //           // .join("\n"),
-    //         };
-    //         // TODO handle images and files here
-    //       }
-    //       return message;
-    //     })
-    // };
-
     let conversationForAPI = await buildConversationForAPI(localState);
 
     // Prepare system prompt
@@ -550,7 +200,7 @@ const sendMessage = async ({
       delete conversationForAPI.settings.arcana;
       delete conversationForAPI.settings.tools;
     }
-
+    
     // Pushing message into conversation history
     setLocalState((prev) => ({
       ...prev,
@@ -560,15 +210,17 @@ const sendMessage = async ({
         { role: "assistant", content: [{ type: "text", text: ""}], loading: true },
         { role: "user", content: [{ type: "text", text: "" }] },
       ],
+      flush: true // Save to DB immediately
     }));
 
     // Stream assistant response into localState
-    async function getChatChunk() {
+    async function getChatChunk(conversationId, messageId = null) {
       let currentResponse = "";
       for await (const chunk of chatCompletions(conversationForAPI, timeout)) {
         currentResponse += chunk;
         // UI update happens here in the caller
         setLocalState(prev => {
+          if (prev.id !== conversationId) {return prev;}
           const messages = [...prev.messages];
           messages[messages.length - 2] = {
             role: "assistant",
@@ -584,17 +236,35 @@ const sendMessage = async ({
     }
 
     let response = "";
+    let inBackground = false;
     try {
       // Get chat completion response
-      response = await getChatChunk();
+      response = await getChatChunk(conversationId);
     } catch (error) {
       console.error("Error fetching chat chunk:", error);
     } finally {
       // Set loading to false
       setLocalState(prev => {
+        if (prev.id !== conversationId) {
+          // Handle save when conversation is not active
+          // Save directly into DB
+          updateConversation(conversationId, {
+            ...localState,
+            messages: [
+              ...localState.messages,
+              { role: "assistant", content: [{ type: "text", text: response}], loading: false },
+              { role: "user", content: [{ type: "text", text: "" }] },
+              // TODO what if prompt changes before switching?
+            ]
+          })
+          return prev;
+        }
         const messages = [...prev.messages];
         messages[messages.length - 2] = {
-          ...messages[messages.length - 2],
+          role: "assistant",
+          content: [
+            { type: "text", text: response }
+          ],
           loading: false,
         };
         return { ...prev, messages };
@@ -627,10 +297,22 @@ const sendMessage = async ({
     if (conversationForAPI.messages.length <= 4) {
       const title = await generateTitle(conversationForAPI.messages);
       console.log("Generated title is ", title)
-      setLocalState((prevState) => ({
-        ...prevState,
-        title,
-      }));
+      setLocalState(prev => {
+        if (prev.id !== conversationId) {
+          updateConversation(conversationId, {
+            ...localState,
+            messages: [
+              ...localState.messages,
+              { role: "assistant", content: [{ type: "text", text: response}] },
+              { role: "user", content: [{ type: "text", text: "" }] },
+              // TODO what if prompt changes before switching?
+            ],
+            title
+          })
+          return prev;
+        }
+        return { ...prev, title };
+      });
     }
 
     // Update memory if necessary
@@ -658,68 +340,8 @@ const sendMessage = async ({
       notifyError("Failed to update memory.");
     }
 
-    // // Edit last assistant message with response:
-    // NOT NEEDED ANYMORE THANKS TO getChatChunk
-    // setLocalState((prev) => {
-    //   const messages = [...prev.messages];
-    //   messages[messages.length - 2] = { role: "assistant", content: response }
-    //   return { ...prev, messages };
-    // });
-
-    // Generate title when message stored in local
-    // generateTitle(
-    //   localState.messages,
-    // )
-
-    // Original conversation with "info" objects (for local state)
-    // const messages = finalConversationForState;
-    // // Update conversation
-    // const updatedMessages = [
-    //   ...messages,
-    //   { role: "assistant", content: response },
-    // ];
-
-    // // Clean conversation to avoid bloating
-    // const cleanedMessages = updatedMessages.map((message) => {
-    //   if (message.role === "user" && Array.isArray(message.content)) {
-    //     return {
-    //       role: "user",
-    //       content: message.content.map((item) => {
-    //         if (item.type === "video_url") {
-    //           return {
-    //             type: "video_url",
-    //             video_url: {
-    //               hasVideo: true,
-    //               url: "",
-    //             },
-    //           };
-    //         }
-    //         return item;
-    //       }),
-    //     };
-    //   }
-    //   return message;
-    // });
-
-    // Clear loading states
-    // dispatch(setLockConversation(false));
-    // if (operationType === "new") {
-    //   setLoading(false);
-    //   setSelectedFiles([]);
-    // } else {
-    //   setLoadingResend(false);
-    // }
   } catch (error) {
-    // Handle errors
-    // dispatch(setLockConversation(false));
-    // if (operationType === "new") {
-    //   setLoading(false);
-    //   setSelectedFiles([]);
-    // } else {
-    //   setLoadingResend(false);
-    // }
-
-    // Handle different error types
+    // ‌Handle Errors
     if (error.name === "AbortError") {
       notifyError("Request aborted.");
     } else if (error.message) {

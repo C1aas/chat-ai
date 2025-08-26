@@ -33,6 +33,7 @@ import UserContainer from "../Header/UserContainer";
 import ThemeToggle from "../Header/ThemeToggle";
 import { ChevronRight } from "lucide-react";
 
+import { getDefaultSettings } from "../../utils/conversationUtils";
 
 const sleep = (delay) => new Promise((resolve) => setTimeout(resolve, delay));
 

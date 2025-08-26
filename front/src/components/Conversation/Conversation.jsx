@@ -7,6 +7,7 @@ import ImportConversationButton from "./ImportConversationButton";
 import UndoButton from "./UndoButton";
 import ClearHistoryButton from "./ClearHistoryButton";
 import MessageAssistant from "./MessageAssistant/MessageAssistant";
+import HallucinationWarning from "../Others/HallucinationWarning";
 
 export default function Conversation({
   localState,
@@ -28,39 +29,6 @@ export default function Conversation({
   const lastResponseLength = useRef(0);
   const lastScrollTop = useRef(0);
   const autoScrollTimeout = useRef(null);
-
-  // const handleResponseSave = (index) => {
-  //   // Find assistant response index in conversation array
-  //   const assistantIndex = localState.messages.findIndex(
-  //     (msg) =>
-  //       msg.role === "assistant" &&
-  //       msg.content === localState.responses[index].response
-  //   );
-
-  //   // Update both responses and conversation
-  //   const newResponses = localState.responses.map((res, i) => {
-  //     if (i === index) {
-  //       return { ...res, response: editedResponse };
-  //     }
-  //     return res;
-  //   });
-
-  //   const newMessages = localState.messages.map((msg, i) => {
-  //     if (i === assistantIndex) {
-  //       return { ...msg, content: editedResponse };
-  //     }
-  //     return msg;
-  //   });
-
-  //   setLocalState({
-  //     ...localState,
-  //     responses: newResponses,
-  //     messages: newMessages,
-  //   });
-
-  //   setEditingResponseIndex(-1);
-  //   setEditedResponse("");
-  // };
 
   // Enhanced scroll to bottom function
   const scrollToBottom = useCallback(
@@ -282,11 +250,16 @@ export default function Conversation({
   //   }
   // }, [loading, loadingResend, userScrolledUp]);
 
+  // if (localState.messages?.length <= 2) return null;
+
   return (
-    <>
+    <div className={`flex-1 min-h-0 h-full overflow-y-auto flex flex-col relative w-full border border-gray-200 dark:border-gray-800 rounded-2xl shadow-md dark:shadow-dark bg-white dark:bg-bg_secondary_dark
+    transition-opacity duration-500 ease-in-out w-full
+    ${localState.messages.length <= 2 ? "max-h-0 opacity-0 scale-0 pointer-events-none overflow-hidden" : "scale-100 opacity-100"}`}>
+      <HallucinationWarning />
       <div
         ref={containerRef}
-        className="p-1.5 flex flex-col gap-1.5 overflow-y-auto flex-1 relative"
+        className="p-1.5 flex flex-col gap-1.5 flex-1 relative"
       >
         {localState.messages.slice(0, -1)?.map((message, message_index) => (
           <>
@@ -320,14 +293,7 @@ export default function Conversation({
         ))}
       </div>
 
-      {localState?.messages?.length <= 2 ? (
-        // Empty conversation
-        <ImportConversationButton
-          localState={localState}
-          setLocalState={setLocalState}
-        />
-      ) : (
-        // Non-empty conversation
+      {localState?.messages?.length >= 4 && (
         <div className="w-full bottom-0 sticky select-none h-fit px-3 py-1.5 flex justify-between items-center bg-white dark:bg-bg_secondary_dark rounded-b-2xl">
           {/* Export conversation button */}
           <ClearHistoryButton
@@ -345,21 +311,11 @@ export default function Conversation({
             </button>
           )}
           <div className="flex items-baseline gap-4">
-            {/* Export conversation button */}
-            <ExportConversationButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
-            {/* Import conversation button */}
-            <ImportConversationButton
-              localState={localState}
-              setLocalState={setLocalState}
-            />
             {/* Undo button */}
             <UndoButton localState={localState} setLocalState={setLocalState} />
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

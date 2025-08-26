@@ -1,72 +1,15 @@
 import { useMemo, useEffect, useState, useRef } from "react";
 import Papa from "papaparse";
 import BaseModal from "../BaseModal"; // Using our new BaseModal (Headless UI)
+import AudioPlayer from "./AudioPlayer";
 import icon_cross_sm from "../../assets/icons/cross_sm.svg";
-import { loadFile, useFile, useFileBase64 } from "../../db";
+import { loadFile, useFile, useFileBase64, useFileContent } from "../../db";
 import { X } from "lucide-react";
+import { getFileType } from "../../utils/attachments";
 
 // --------------------
 // Utility + helper components
 // --------------------
-const CODE_EXTENSIONS = [
-  ".py",
-  ".js",
-  ".java",
-  ".cpp",
-  ".c",
-  ".h",
-  ".cs",
-  ".rb",
-  ".php",
-  ".go",
-  ".rs",
-  ".swift",
-  ".kt",
-  ".ts",
-  ".jsx",
-  ".tsx",
-  ".html",
-  ".json",
-  ".txt",
-  ".csv",
-  ".pdf",
-  ".md",
-  ".tex",
-  ".xml",
-  ".yaml",
-  ".yml",
-  ".ini",
-  ".toml",
-  ".properties",
-  ".css",
-  ".scss",
-  ".sass",
-  ".less",
-  ".sh",
-  ".ps1",
-  ".pl",
-  ".lua",
-  ".r",
-  ".m",
-  ".mat",
-  ".asm",
-  ".sql",
-  ".ipynb",
-  ".rmd",
-  ".dockerfile",
-  ".proto",
-  ".cfg",
-  ".bat",
-];
-
-const isCodeFile = (filename) => {
-  try {
-    return CODE_EXTENSIONS.some((ext) => filename?.toLowerCase().endsWith(ext));
-  } catch (error) {
-    console.error("Error checking file extension:", error);
-    return false;
-  }
-};
 
 const CSVTable = ({ content }) => {
   const [error, setError] = useState(null);
@@ -132,130 +75,30 @@ const CSVTable = ({ content }) => {
   );
 };
 
-// We'll keep your AudioPlayer intact here
-const AudioPlayer = ({ file }) => {
-  // ... keep ALL your existing AudioPlayer code unchanged ...
-  // (No need to alter, just copy it over from your existing file)
-  // Note: Doesn't depend on modal logic so we can plug it in the same way.
-  // -------------------------------
-  // For brevity, I won't re-paste the full AudioPlayer implementation here
-  // Copy exactly as you have it.
-  // -------------------------------
-};
-
 export default function PreviewModal({ isOpen, onClose, fileId }) {
 
   const [loadError, setLoadError] = useState(null);
   const {file, data} = useFile(fileId);
   const base64 = useFileBase64(fileId); // TODO only load if important
+  const textContent = useFileContent(fileId);
   if (!file) return null;
-  console.log(file)
-  
-  if (!file) return null; // TODO placeholder
 
-    //  if (!file?.data && attachment.fileId) {
-    //           file.data = await loadFile(attachment.fileId);
-              
-    //           if (file.type.startsWith("image/")) {
-    //             setBase64(await readFileAsBase64(newFile));
-    //           }
-    //       }
-
-  
-  const getTextContent = (file) => (typeof file === "string") ? file : file?.content || file?.text || "";
-
-  const getFileType = (file) => {
-    if (file?.type === "audio" || file?.isAudio) return "audio";
-    if (file?.fileType === "pdf") return "pdf";
-    if (file?.fileType === "csv") return "csv";
-    if (file?.fileType === "markdown") return "markdown";
-    if (file?.fileType === "code") return "code";
-    if (file?.fileType === "text") return "text";
-    if (file?.type === "image") return "image";
-    if (file?.type === "video") return "video";
-    if (file?.type === "document") return "pdf";
-
-    if (file?.name) {
-      const ext = file.name.toLowerCase().split(".").pop();
-      if (ext === "pdf") return "pdf";
-      if (["jpg", "jpeg", "png", "gif", "webp"].includes(ext)) return "image";
-      if (["mp4", "avi", "mov"].includes(ext)) return "video";
-      if (["mp3", "wav", "ogg"].includes(ext)) return "audio";
-      if (["csv"].includes(ext)) return "csv";
-      if (["md", "markdown"].includes(ext)) return "markdown";
-      if (["txt"].includes(ext)) return "text";
-    }
-    return "unknown";
-  };
-
-  // const pdfUrl = useMemo(() => {
-  //   try {
-  //     if (getFileType(file) !== "pdf") return null;
-  //     if (file.originalFile instanceof File) return URL.createObjectURL(file.originalFile);
-  //     if (file.file instanceof File) return URL.createObjectURL(file.file);
-  //     if (file.data && typeof file.data === "string") {
-  //       const byteCharacters = atob(file.data);
-  //       const byteArray = new Uint8Array([...byteCharacters].map(c=>c.charCodeAt(0)));
-  //       const blob = new Blob([byteArray], { type: "application/pdf" });
-  //       return URL.createObjectURL(blob);
-  //     }
-  //     if (file.text?.startsWith("data:application/pdf")) return file.text;
-  //     return null;
-  //   } catch (error) {
-  //     console.error("Error creating PDF URL:", error);
-  //     setLoadError("Failed to load PDF file");
-  //     return null;
-  //   }
-  // }, [file]);
-
-  // useEffect(() => {
-  //   return () => {
-  //     if (pdfUrl && !pdfUrl.startsWith("data:")) {
-  //       URL.revokeObjectURL(pdfUrl);
-  //     }
-  //   };
-  // }, [pdfUrl]);
-
-  const handleDownload = () => {
+  const handleSave = () => {
     try {
-      const fileType = getFileType(file);
-      let name = file?.name || "download";
-      let downloadUrl, blob;
+      // Create file as is
+      const fileToSave = new File([data], file?.name || "Save", { type: file.type })     
 
-      if (fileType === "audio") {
-        if (!name.includes(".")) name += `.${file.format || "wav"}`;
-        const byteArray = new Uint8Array([...atob(base64)].map(c=>c.charCodeAt(0)));
-        blob = new Blob([byteArray], { type: `audio/${file.format || "wav"}` });
-        downloadUrl = URL.createObjectURL(blob);
-      } else if (fileType === "pdf") {
-        if (file.processed && file.processedContent) {
-          if (!name.includes("."))
-            name = name.replace(".pdf", "") + "_processed.txt";
-          blob = new Blob([file.processedContent], {
-            type: "text/plain;charset=utf-8",
-          });
-          downloadUrl = URL.createObjectURL(blob);
-        } else if (pdfUrl) {
-          downloadUrl = pdfUrl;
-        } else throw new Error("No PDF content available for download");
-      } else {
-        if (fileType === "image") {
-          downloadUrl = base64;
-        } else {
-          if (!name.includes(".")) name += ".txt";
-          blob = new Blob([textContent], { type: "text/plain;charset=utf-8" });
-          downloadUrl = URL.createObjectURL(blob);
-        }
-      }
-
+      // Create and use download link
+      const downloadUrl = URL.createObjectURL(fileToSave);
       const a = document.createElement("a");
       a.href = downloadUrl;
-      a.download = name;
+      a.download = file?.name || "Save";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
 
-      if (blob) URL.revokeObjectURL(downloadUrl);
+      // Clean up
+      setTimeout(() => URL.revokeObjectURL(downloadUrl), 300);
     } catch (err) {
       console.error("Download failed:", err);
       alert("Failed to download file");
@@ -278,16 +121,14 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         );
 
       const fileType = getFileType(file);
-      // const textContent = getTextContent(file);
       // Audio Player
       if (fileType === "audio") {
         return (
           <div className="flex justify-center items-center min-h-[400px]">
-            <AudioPlayer file={file} />
+            <AudioPlayer file={file} dataURL={base64} />
           </div>
         );
       }
-
       // Image Viewer
       if (fileType === "image") {
         return (
@@ -301,13 +142,12 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
           </div>
         );
       }
-
       // Video Player
       if (fileType === "video") {
         return (
           <div className="flex justify-center">
             <video
-              src={textContent}
+              src={base64}
               controls
               className="max-h-[85vh] max-w-full"
               onError={() => setLoadError("Failed to load video")}
@@ -322,49 +162,8 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       if (fileType === "pdf") {
         const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
-        // Priority 1: If processed, show the processed content FIRST
-        if (file.processed && file.processedContent) {
-          return (
-            <div className="w-full h-[85vh] flex flex-col">
-              {/* Show processed status */}
-              <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700/50 rounded-lg p-3 mb-4 mx-4">
-                <div className="flex items-center gap-2">
-                  <svg
-                    className="w-5 h-5 text-green-600 dark:text-green-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  <div>
-                    <p className="text-sm font-medium text-green-800 dark:text-green-200">
-                      Processed PDF Content
-                    </p>
-                    <p className="text-xs text-green-600 dark:text-green-300">
-                      Text has been extracted and is searchable in
-                      conversations.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-white dark:bg-gray-900 p-6 overflow-auto flex-1 mx-4 rounded-lg border dark:border-gray-700">
-                <pre className="whitespace-pre-wrap text-gray-800 dark:text-gray-200 font-sans text-sm leading-relaxed">
-                  {file.processedContent}
-                </pre>
-              </div>
-            </div>
-          );
-        }
-
-        // Priority 2: Show mobile warning for PDF previews (only if not processed)
-        if (isMobile && pdfUrl) {
+        // Show mobile warning for PDF previews (only if not processed)
+        if (isMobile && base64) {
           return (
             <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg">
               <svg
@@ -390,8 +189,8 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
           );
         }
 
-        // Priority 3: If we have a valid PDF URL for preview (original PDF) AND not processed
-        if (pdfUrl && !isMobile && !file.processed) {
+        // If we have a valid PDF URL for preview (original PDF) AND not processed
+        if (base64 && !isMobile) {
           return (
             <div className="w-full h-[85vh] flex flex-col">
               {/* Show processing status if not processed */}
@@ -416,15 +215,14 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
                     </p>
                     <p className="text-xs text-blue-600 dark:text-blue-300">
                       This PDF hasn&quot;t been processed yet. Click
-                      &quot;Process PDF&quot; to extract searchable text
-                      content.
+                      &quot;Process&quot; to extract text content.
                     </p>
                   </div>
                 </div>
               </div>
 
               <iframe
-                src={pdfUrl}
+                src={base64}
                 className="w-full flex-1"
                 style={{ minWidth: "800px" }}
                 title={file.name}
@@ -434,7 +232,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
           );
         }
 
-        // Priority 4: If no PDF data available, show helpful message
+        // If no PDF data available, show helpful message
         return (
           <div className="flex flex-col items-center justify-center h-[50vh] p-6 text-center bg-gray-50 dark:bg-gray-800 rounded-lg mx-4">
             <svg
@@ -462,7 +260,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
 
       // CSV Table Viewer
       if (fileType === "csv") {
-        return <CSVTable content={file.content || textContent} />;
+        return <CSVTable content={file.content || data} />;
       }
 
       if (
@@ -478,7 +276,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
       }
 
       // Code Viewer
-      if (isCodeFile(file.name)) {
+      if (fileType === "code") {
         return (
           <pre className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg overflow-auto max-h-[85vh] w-full">
             <code className="font-mono text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200">
@@ -517,6 +315,7 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
     <BaseModal
       isOpen={isOpen}
       onClose={onClose}
+      minimal={true}
       titleKey={null} // We'll pass custom header
       maxWidth="max-w-[1000px]"
     >
@@ -528,11 +327,11 @@ export default function PreviewModal({ isOpen, onClose, fileId }) {
         <div className="flex items-center gap-4">
           {/* Download File Button */}
           <button
-            onClick={handleDownload}
+            onClick={handleSave}
             className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 rounded-2xl text-white font-medium text-sm transition-colors cursor-pointer"
             aria-label="Download file"
           >
-            Download
+            Save to device
           </button>
           {/* Close Button */}
           <button onClick={onClose} aria-label="Close">
