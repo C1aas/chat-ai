@@ -5,13 +5,14 @@ import { useUpdateModelsData } from "../../hooks/useUpdateModelsData";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useSelector } from "react-redux";
 import {
-  faChevronDown,  faMagnifyingGlass, faBrain, faImage, faVideo
+  faChevronDown, faMagnifyingGlass, faBrain, faImage, faVideo
 } from '@fortawesome/free-solid-svg-icons'
 import { selectDefaultModel } from "../../Redux/reducers/userSettingsReducer";
 import DemandIndicator from "./DemandIndicator";
 import type { BaseModelInfo } from "../../types/models";
+import SidebarToggleMobile from "../Sidebar/SidebarToggleMobile";
 
-export default function ModelSelectorSimple({currentModelId, modelsList, onChange}: {currentModelId: string | undefined, modelsList: BaseModelInfo[], onChange: (model: BaseModelInfo) => void}) {
+export default function ModelSelectorSimple({ currentModelId, modelsList, onChange }: { currentModelId: string | undefined, modelsList: BaseModelInfo[], onChange: (model: BaseModelInfo) => void }) {
   const userDefaultModel = useSelector(selectDefaultModel);
 
   const selectedModel = modelsList ? modelsList.find(model => model.id === currentModelId) || modelsList.find(model => model.id === userDefaultModel) || modelsList[0] || null : null;
@@ -45,7 +46,7 @@ export default function ModelSelectorSimple({currentModelId, modelsList, onChang
       return [];
     }
     let result = modelsList.slice(); // copy list
-    if (q && q !== ""){
+    if (q && q !== "") {
       result = modelsList.filter((m) =>
         m.name.toLowerCase().includes(q) ||
         m.id.toLowerCase().includes(q) ||
@@ -63,9 +64,9 @@ export default function ModelSelectorSimple({currentModelId, modelsList, onChang
   }, [searchQuery, modelsList, sortBy]);
 
   // use memo to not rerender on search input
-  const ListElement = memo(({idx, model, onClick}: {idx: number, model: BaseModelInfo, onClick: () => void}) => {
+  const ListElement = memo(({ idx, model, onClick }: { idx: number, model: BaseModelInfo, onClick: () => void }) => {
     return (
-      <div 
+      <div
         onClick={onClick}
         data-index={idx} data-id={model.id} tabIndex={idx}
         className="item cursor-pointer my-1 px-2 py-1 hover:bg-slate-100 rounded-2xl border border-slate-200 bg-white"
@@ -90,6 +91,8 @@ export default function ModelSelectorSimple({currentModelId, modelsList, onChang
   return (
 
     <div ref={dropdownRef} className="w-full">
+
+
       {/** Trigger/Input **/}
       <button
         onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -146,9 +149,9 @@ export default function ModelSelectorSimple({currentModelId, modelsList, onChang
           <div className="rounded-xl overflow-hidden">
             {filteredModelsList.map((m, idx) => (
               <ListElement
-              key={m.id}
-              onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}
-              idx={idx} model={m} />
+                key={m.id}
+                onClick={() => { setSelectedModel(m); setDropdownOpen(false); }}
+                idx={idx} model={m} />
             ))}
           </div>
         </div>
